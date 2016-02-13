@@ -9,3 +9,6 @@ Required Arduino Library
 
 2016_Lights/2016_Lights.ino - 
 The script
+
+Lights Plans.txt -
+Plans for the lights
