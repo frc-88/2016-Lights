@@ -36,7 +36,7 @@ boolean direction = FORWARD;
 CRGB leds[NUM_LEDS];
 
 #define BRIGHTNESS          255
-#define FRAMES_PER_SECOND  1000
+#define FRAMES_PER_SECOND  10000
 
 
 //Delay for each cycle of random colors.
@@ -63,6 +63,7 @@ int mode2 = 4;
 int mode3 = 5;
 int modeA = 0;
 int analog = 0;
+int analog2 = 0;
 
 int a = 0;
 int b = 0;
@@ -70,6 +71,8 @@ int c = 0;
 int d = 0;
 int e = 0;
 int f = 0;
+
+int doFlash = 0;
 
 void setup() {
   delay(3000); // 3 second delay for recovery
@@ -81,13 +84,13 @@ void setup() {
 t.every(1000,incCycle);
   // set master BRIGHTNESS control
   FastLED.setBrightness(BRIGHTNESS);
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
-SimplePatternList gPatterns = { rainbow, juggleRed, juggleBlue, autoGreen, randColor, sinelonBlue, sinelonRed };
+SimplePatternList gPatterns = { rainbow, juggleRed, juggleBlue, autoGreen, randColor, sinelonBlue, sinelonRed, nothing };
 
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
@@ -101,48 +104,14 @@ int mode = digitalRead(mode1)
            | (digitalRead(mode2) << 1)
            | (digitalRead(mode3) << 2);
            
-    Serial.print(mode + "    ");
+           
+    //Serial.println(mode);
     analog = analogRead(modeA);
-      
-      switch(analog){
-        case 0>=analog<=49:
-              analog = 10;
-              break;
-        case 50>=analog<=150:
-              analog = 100;
-              break;
-        case 151>=analog<=250:
-              analog = 200;
-              break;
-        case 251>=analog<=350:
-              analog = 300;
-              break;
-        case 351>=analog<=450:
-              analog = 400;
-              break;
-        case 451>=analog<=550:
-              analog = 500;
-              break;
-         case 551>=analog<=650:
-              analog = 600;
-              break;
-         case 651>=analog<=750:
-              analog = 700;
-              break;
-         case 751>=analog<=850:
-              analog = 800;
-              break;
-         case 851>=analog<=950:
-              analog = 900;
-              break;
-         case 951>=analog<=1000:
-              analog = 1000;
-              break;
-      }
-      
-      
-    Serial.println(analog);
     
+    
+    analogAdjust();
+      
+
     
 gPatt(mode);
 
@@ -203,23 +172,46 @@ void sinelon()
   // a colored dot sweeping back and forth, with fading trails
   fadeToBlackBy( leds, NUM_LEDS, 20);
   int pos = beatsin16(13,0,NUM_LEDS);
-  leds[pos] += CHSV( gHue, 255, 192);
+  leds[pos] += CHSV( gHue, 255, BRIGHTNESS);
 }
 
 void sinelonRed()
 {
   // a colored dot sweeping back and forth, with fading trails
-  fadeToBlackBy( leds, NUM_LEDS, 20);
-  int pos = beatsin16(13,0,NUM_LEDS);
-  leds[pos] += CHSV( 0, 255, 192);
+ if(doFlash == 0){
+  fadeToBlackBy( leds, NUM_LEDS, analog2/10);
+  int pos = beatsin16(analog2/10,0,NUM_LEDS);
+  leds[pos] += CHSV( 0, 255, BRIGHTNESS);
+  }
+  
+  else if(doFlash == 1){
+    fill_solid( leds, NUM_LEDS, CRGB(255,0,0));
+      FastLED.show(); 
+    delay(50);
+    fill_solid( leds, NUM_LEDS, CRGB(0,0,0));
+      FastLED.show(); 
+    delay(50);
+}
 }
 
 void sinelonBlue()
 {
   // a colored dot sweeping back and forth, with fading trails
-  fadeToBlackBy( leds, NUM_LEDS, 20);
-  int pos = beatsin16(analog/10,0,NUM_LEDS);
-  leds[pos] += CHSV( 160, 255, 192);
+  if(doFlash == 0){
+  fadeToBlackBy( leds, NUM_LEDS, analog2/10);
+  int pos = beatsin16(analog2/10,0,NUM_LEDS);
+  leds[pos] += CHSV( 160, 255, BRIGHTNESS);
+  }
+  
+  else if(doFlash == 1){
+    fill_solid( leds, NUM_LEDS, CRGB(0,0,255));
+      FastLED.show(); 
+    delay(50);
+    fill_solid( leds, NUM_LEDS, CRGB(0,0,0));
+      FastLED.show(); 
+    delay(50);
+  }
+  
 }
 
 void bpm()
@@ -229,7 +221,7 @@ void bpm()
   CRGBPalette16 palette = PartyColors_p;
   uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
   for( int i = 0; i < NUM_LEDS; i++) { //9948
-    leds[i] = CHSV( 160, 255, 192);
+    leds[i] = CHSV( 160, 255, BRIGHTNESS);
   }
 }
 
@@ -240,7 +232,7 @@ void bpmRed()
   CRGBPalette16 palette = PartyColors_p;
   uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
   for( int i = 0; i < NUM_LEDS; i++) { //9948
-    leds[i] = CHSV( 160, 255, 192);
+    leds[i] = CHSV( 160, 255, BRIGHTNESS);
   }
 }
 
@@ -361,7 +353,7 @@ void tjColors(){
     leds[f] = CHSV(224,255,BRIGHTNESS);
     FastLED.show();
     f++;
-    leds[f] = CHSV(192,255,BRIGHTNESS);
+    leds[f] = CHSV(193,255,BRIGHTNESS);
     FastLED.show();
     f++;
   }
@@ -666,8 +658,87 @@ void incCycle()
   cycle++;
 }
 
+void analogAdjust()
+{
 
+        if(analog<=49){
+              analog2 = 10;
+              doFlash = 0;
+        }
+              
+              
+        else if(50<=analog && analog<=150){
+              analog2 = 100;
+              doFlash = 0;
+        }
+              
+              
+        else if(151<=analog && analog<=250){
+              analog2 = 200;
+              doFlash = 0;
+        }
+              
+              
+        else if(251<=analog && analog<=350){
+              analog2 = 300;
+              doFlash = 0;
+        }
+              
+              
+        else if(351<=analog && analog<=450){
+              analog2 = 400;
+              doFlash = 0;
+        }
+              
+              
+        else if(451<=analog && analog<=550){
+              analog2 = 500;
+              doFlash = 0;
+        }
+              
+              
+        else if(551<=analog && analog<=650){
+              analog2 = 600;
+              doFlash = 0;
+         }
+              
+              
+        else if(651<=analog && analog<=750){
+              analog2 = 700;
+              doFlash = 0;
+         }
+              
+              
+        else if(751<=analog && analog<=850){
+              analog2 = 800;
+              doFlash = 0;
+         }
+              
+              
+        else if(851<=analog && analog<=950){
+              analog2 = 900;
+              doFlash = 0;
+         }
+              
+              
+        else if(951<=analog){
+              analog2 = 1000;
+              doFlash = 1;
+         }
+              
+              
 
+      
+      
+   // Serial.println(analog);
+    Serial.println(analog2); 
+}
+
+void fill_solid( struct CRGB * leds, int numToFill,
+                 const struct CRGB& color);
+
+void nothing(){
+}
 
 
   
