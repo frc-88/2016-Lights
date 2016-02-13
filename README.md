@@ -7,5 +7,5 @@ Required version of required library
 FastLED.zip - 
 Required Arduino Library
 
-LEDs_For_Robot.ino - 
-The script more info in First Commit
+2016_Lights/2016_Lights.ino - 
+The script
