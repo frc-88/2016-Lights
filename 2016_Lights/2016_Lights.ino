@@ -1,14 +1,18 @@
+
 #include "FastLED.h"
 
 #include "Timer.h"
 
+int serial = 0;
+int analogDebug = 2;
+
 FASTLED_USING_NAMESPACE
 
-// FastLED "100-lines-of-code" demo reel, showing just a few 
-// of the kinds of animation patterns you can quickly and easily 
-// compose using FastLED.  
+// FastLED "100-lines-of-code" demo reel, showing just a few
+// of the kinds of animation patterns you can quickly and easily
+// compose using FastLED.
 //
-// This example also shows one easy way to define multiple 
+// This example also shows one easy way to define multiple
 // animations patterns and have them automatically rotate.
 //
 // -Mark Kriegsman, December 2014
@@ -16,6 +20,50 @@ FASTLED_USING_NAMESPACE
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001000)
 #warning "Requires FastLED 3.1 or later; check github for latest code."
 #endif
+
+
+// scrolltext demo for Adafruit RGBmatrixPanel library.
+// Demonstrates double-buffered animation on our 16x32 RGB LED matrix:
+// http://www.adafruit.com/products/420
+
+// Written by Limor Fried/Ladyada & Phil Burgess/PaintYourDragon
+// for Adafruit Industries.
+// BSD license, all text above must be included in any redistribution.
+
+#include <Adafruit_GFX.h>   // Core graphics library
+#include <RGBmatrixPanel.h> // Hardware-specific library
+
+// Similar to F(), but for PROGMEM string pointers rather than literals
+#define F2(progmem_ptr) (const __FlashStringHelper *)progmem_ptr
+
+#define CLK 11  // MUST be on PORTB! (Use pin 11 on Mega)
+#define LAT 10
+#define OE  9
+#define A   A0
+#define B   A1
+#define C   A2
+// Last parameter = 'true' enables double-buffering, for flicker-free,
+// buttery smooth animation.  Note that NOTHING WILL SHOW ON THE DISPLAY
+// until the first call to swapBuffers().  This is normal.
+RGBmatrixPanel matrix(A, B, C, CLK, LAT, OE, false);
+// Double-buffered mode consumes nearly all the RAM available on the
+// Arduino Uno -- only a handful of free bytes remain.  Even the
+// following string needs to go in PROGMEM:
+
+//const char str[] PROGMEM = "Oh Yeah! 88";
+//int    textX   = matrix.width(),
+//       textMin = sizeof(str) * -12,
+//       hue     = 0;
+//int8_t ball[3][4] = {
+//  {  3,  0,  1,  1 }, // Initial X,Y pos & velocity for 3 bouncy balls
+//  { 17, 15,  1, -1 },
+//  { 27,  4, -1,  1 }
+//};
+//static const uint16_t PROGMEM ballcolor[3] = {
+//  0x0080, // Green=1
+//  0x0002, // Blue=1
+//  0x1000  // Red=1
+//};
 
 
 #define FORWARD 0
@@ -28,11 +76,11 @@ FASTLED_USING_NAMESPACE
 boolean direction = FORWARD;
 
 
-#define DATA_PIN    2
+#define DATA_PIN    8
 //#define CLK_PIN   1
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
-#define NUM_LEDS    51
+#define NUM_LEDS    73
 CRGB leds[NUM_LEDS];
 
 #define BRIGHTNESS          255
@@ -58,10 +106,10 @@ int pled2 = 0;
 int pled3 = 0;
 int pled4 = 0;
 
-int mode1 = 3;
-int mode2 = 4;
-int mode3 = 5;
-int modeA = 0;
+int mode1 = 0;
+int mode2 = 1;
+int mode3 = 13;
+int modeA = 5;
 int analog = 0;
 int analog2 = 0;
 
@@ -74,17 +122,132 @@ int f = 0;
 
 int doFlash = 0;
 
+const char str[] PROGMEM = "Oh Yeah! 88";
+int    textX   = matrix.width(),
+       textMin = sizeof(str) * -12,
+       hue     = 0;
+int8_t ball[3][4] = {
+  {  3,  0,  1,  1 }, // Initial X,Y pos & velocity for 3 bouncy balls
+  { 17, 15,  1, -1 },
+  { 27,  4, -1,  1 }
+};
+static const uint16_t PROGMEM ballcolor[3] = {
+  0x0080, // Green=1
+  0x0002, // Blue=1
+  0x1000  // Red=1
+};
+
+//void matrixDisplay(const char str[]) {
+//
+//  int    textX   = matrix.width(),
+//       textMin = sizeof(str) * -12,
+//       hue     = 0;
+//int8_t ball[3][4] = {
+//  {  3,  0,  1,  1 }, // Initial X,Y pos & velocity for 3 bouncy balls
+//  { 17, 15,  1, -1 },
+//  { 27,  4, -1,  1 }
+//};
+//static const uint16_t PROGMEM ballcolor[3] = {
+//  0x0080, // Green=1
+//  0x0002, // Blue=1
+//  0x1000  // Red=1
+//};
+//
+//  byte i;
+//
+//  // Clear background
+//  matrix.fillScreen(0);
+//
+//
+//  // Bounce three balls around
+//  for(i=0; i<3; i++) {
+//    // Draw 'ball'
+//    matrix.fillCircle(ball[i][0], ball[i][1], 5, pgm_read_word(&ballcolor[i]));
+//    // Update X, Y position
+//    ball[i][0] += ball[i][2];
+//    ball[i][1] += ball[i][3];
+//    // Bounce off edges
+//    if((ball[i][0] == 0) || (ball[i][0] == (matrix.width() - 1)))
+//      ball[i][2] *= -1;
+//    if((ball[i][1] == 0) || (ball[i][1] == (matrix.height() - 1)))
+//      ball[i][3] *= -1;
+//  }
+//
+//
+//  // Draw big scrolly text on top
+//  matrix.setTextColor(matrix.ColorHSV(hue, 255, 255, true));
+//  matrix.setCursor(textX, 1);
+//  matrix.print(F2(str));
+//
+//  // Move text left (w/wrap), increase hue
+//  if((--textX) < textMin) textX = matrix.width();
+//  hue += 7;
+//  if(hue >= 1536) hue -= 1536;
+//
+//  // Update display
+//  matrix.swapBuffers(false);
+//}
+
+
+
+void doMatrix() {
+  byte i;
+
+  // Clear background
+  matrix.fillScreen(0);
+
+  // Bounce three balls around
+  for (i = 0; i < 3; i++) {
+    // Draw 'ball'
+    matrix.fillCircle(ball[i][0], ball[i][1], 5, pgm_read_word(&ballcolor[i]));
+    // Update X, Y position
+    ball[i][0] += ball[i][2];
+    ball[i][1] += ball[i][3];
+    // Bounce off edges
+    if ((ball[i][0] == 0) || (ball[i][0] == (matrix.width() - 1)))
+      ball[i][2] *= -1;
+    if ((ball[i][1] == 0) || (ball[i][1] == (matrix.height() - 1)))
+      ball[i][3] *= -1;
+  }
+
+  // Draw big scrolly text on top
+  matrix.setTextColor(matrix.ColorHSV(hue, 255, 255, true));
+  matrix.setCursor(textX, 1);
+  matrix.print(F2(str));
+
+  // Move text left (w/wrap), increase hue
+  if ((--textX) < textMin) textX = matrix.width();
+  hue += 7;
+  if (hue >= 1536) hue -= 1536;
+
+  // Update display
+  matrix.swapBuffers(false);
+}
+
+
+
+
+
 void setup() {
-  delay(3000); // 3 second delay for recovery
-  
+  pinMode(mode1, INPUT);
+  pinMode(mode2, INPUT);
+  pinMode(mode3, INPUT);
+  pinMode(13, OUTPUT);
+  //delay(3000); // 3 second delay for recovery
+
   // tell FastLED about the LED strip configuration
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
-t.every(1000,incCycle);
+  //t.every(1000,incCycle);
   // set master BRIGHTNESS control
   FastLED.setBrightness(BRIGHTNESS);
-  Serial.begin(115200);
+  if (serial == 1) {
+    Serial.begin(115200);
+  }
+  matrix.begin();
+  matrix.setTextWrap(false); // Allow text to run off right edge
+  matrix.setTextSize(2);
 }
 
 
@@ -98,27 +261,31 @@ uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
 void loop()
 {
-  t.update();
-  
-int mode = digitalRead(mode1)
-           | (digitalRead(mode2) << 1)
-           | (digitalRead(mode3) << 2);
-           
-           
-    //Serial.println(mode);
-    analog = analogRead(modeA);
-    
-    
-    analogAdjust();
-      
+  //t.update();
 
-    
-gPatt(mode);
+  int mode = digitalRead(mode1)
+             | (digitalRead(mode2) << 1)
+             | (digitalRead(mode3) << 2);
 
-//bpm();
+
+  Serial.println(mode);
+  analog = analogRead(modeA);
+
+
+  analogAdjust();
+
+
+  doMatrix();
+
+  gPatt(mode);
+
+
+  //bpm();
 
   // do some periodic updates
-  EVERY_N_MILLISECONDS( 20 ) { gHue++; } // slowly cycle the "base color" through the rainbow
+  EVERY_N_MILLISECONDS( 20 ) {
+    gHue++;  // slowly cycle the "base color" through the rainbow
+  }
 
 }
 
@@ -126,40 +293,40 @@ gPatt(mode);
 
 
 
-void gPatt(int patternNum){
+void gPatt(int patternNum) {
   // Call the currennt pattern function once, updating the 'leds' array
   gPatterns[patternNum]();
 
   // send the 'leds' array out to the actual LED strip
-  FastLED.show();  
+  FastLED.show();
   // insert a delay to keep the framerate modest
-  FastLED.delay(1000/FRAMES_PER_SECOND);
+  FastLED.delay(1000 / FRAMES_PER_SECOND);
 
 
 }
 
 
-void rainbow() 
+void rainbow()
 {
   // FastLED's built-in rainbow generator
   fill_rainbow( leds, NUM_LEDS, gHue, 7);
 }
 
-void rainbowWithGlitter() 
+void rainbowWithGlitter()
 {
   // built-in FastLED rainbow, plus some random sparkly glitter
   rainbow();
   addGlitter(80);
 }
 
-void addGlitter( fract8 chanceOfGlitter) 
+void addGlitter( fract8 chanceOfGlitter)
 {
-  if( random8() < chanceOfGlitter) {
+  if ( random8() < chanceOfGlitter) {
     leds[ random16(NUM_LEDS) ] += CRGB::White;
   }
 }
 
-void confetti() 
+void confetti()
 {
   // random colored speckles that blink in and fade smoothly
   fadeToBlackBy( leds, NUM_LEDS, 10);
@@ -171,47 +338,47 @@ void sinelon()
 {
   // a colored dot sweeping back and forth, with fading trails
   fadeToBlackBy( leds, NUM_LEDS, 20);
-  int pos = beatsin16(13,0,NUM_LEDS);
+  int pos = beatsin16(13, 0, NUM_LEDS);
   leds[pos] += CHSV( gHue, 255, BRIGHTNESS);
 }
 
 void sinelonRed()
 {
   // a colored dot sweeping back and forth, with fading trails
- if(doFlash == 0){
-  fadeToBlackBy( leds, NUM_LEDS, analog2/10);
-  int pos = beatsin16(analog2/10,0,NUM_LEDS);
-  leds[pos] += CHSV( 0, 255, BRIGHTNESS);
+  if (doFlash == 0) {
+    fadeToBlackBy( leds, NUM_LEDS, analog2 / 10);
+    int pos = beatsin16(analog2 / 10, 0, NUM_LEDS);
+    leds[pos] += CHSV( 0, 255, BRIGHTNESS);
   }
-  
-  else if(doFlash == 1){
-    fill_solid( leds, NUM_LEDS, CRGB(255,0,0));
-      FastLED.show(); 
+
+  else if (doFlash == 1) {
+    fill_solid( leds, NUM_LEDS, CRGB(255, 0, 0));
+    FastLED.show();
     delay(50);
-    fill_solid( leds, NUM_LEDS, CRGB(0,0,0));
-      FastLED.show(); 
+    fill_solid( leds, NUM_LEDS, CRGB(0, 0, 0));
+    FastLED.show();
     delay(50);
-}
+  }
 }
 
 void sinelonBlue()
 {
   // a colored dot sweeping back and forth, with fading trails
-  if(doFlash == 0){
-  fadeToBlackBy( leds, NUM_LEDS, analog2/10);
-  int pos = beatsin16(analog2/10,0,NUM_LEDS);
-  leds[pos] += CHSV( 160, 255, BRIGHTNESS);
+  if (doFlash == 0) {
+    fadeToBlackBy( leds, NUM_LEDS, analog2 / 10);
+    int pos = beatsin16(analog2 / 10, 0, NUM_LEDS);
+    leds[pos] += CHSV( 160, 255, BRIGHTNESS);
   }
-  
-  else if(doFlash == 1){
-    fill_solid( leds, NUM_LEDS, CRGB(0,0,255));
-      FastLED.show(); 
+
+  else if (doFlash == 1) {
+    fill_solid( leds, NUM_LEDS, CRGB(0, 0, 255));
+    FastLED.show();
     delay(50);
-    fill_solid( leds, NUM_LEDS, CRGB(0,0,0));
-      FastLED.show(); 
+    fill_solid( leds, NUM_LEDS, CRGB(0, 0, 0));
+    FastLED.show();
     delay(50);
   }
-  
+
 }
 
 void bpm()
@@ -220,7 +387,7 @@ void bpm()
   uint8_t BeatsPerMinute = 62;
   CRGBPalette16 palette = PartyColors_p;
   uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
-  for( int i = 0; i < NUM_LEDS; i++) { //9948
+  for ( int i = 0; i < NUM_LEDS; i++) { //9948
     leds[i] = CHSV( 160, 255, BRIGHTNESS);
   }
 }
@@ -231,7 +398,7 @@ void bpmRed()
   uint8_t BeatsPerMinute = 62;
   CRGBPalette16 palette = PartyColors_p;
   uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
-  for( int i = 0; i < NUM_LEDS; i++) { //9948
+  for ( int i = 0; i < NUM_LEDS; i++) { //9948
     leds[i] = CHSV( 160, 255, BRIGHTNESS);
   }
 }
@@ -241,8 +408,8 @@ void juggle() {
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
   byte dothue = 0;
-  for( int i = 0; i < 8; i++) {
-    leds[beatsin16(i+7,0,NUM_LEDS)] |= CHSV(dothue, 200, 255);
+  for ( int i = 0; i < 8; i++) {
+    leds[beatsin16(i + 7, 0, NUM_LEDS)] |= CHSV(dothue, 200, 255);
     dothue += 32;
   }
 }
@@ -251,8 +418,8 @@ void juggleRed() {
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
   byte dothue = 0;
-  for( int i = 0; i < 14; i++) {
-    leds[beatsin16(i+7,0,NUM_LEDS)] |= CHSV(dothue, 200, 255);
+  for ( int i = 0; i < 14; i++) {
+    leds[beatsin16(i + 7, 0, NUM_LEDS)] |= CHSV(dothue, 200, 255);
     //dothue += 32;
   }
 }
@@ -261,8 +428,8 @@ void autoGreen() {
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
   byte dothue = 96;
-  for( int i = 0; i < 8; i++) {
-    leds[beatsin16(i+7,0,NUM_LEDS)] |= CHSV(dothue, 200, 255);
+  for ( int i = 0; i < 8; i++) {
+    leds[beatsin16(i + 7, 0, NUM_LEDS)] |= CHSV(dothue, 200, 255);
     //dothue += 32;
   }
 }
@@ -272,76 +439,76 @@ void juggleBlue() {
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
   byte dothue = 160;
-  for( int i = 0; i < 8; i++) {
-    leds[beatsin16(i+7,0,NUM_LEDS)] |= CHSV(dothue, 200, 255);
+  for ( int i = 0; i < 8; i++) {
+    leds[beatsin16(i + 7, 0, NUM_LEDS)] |= CHSV(dothue, 200, 255);
     //dothue += 32;
   }
 }
- 
-void randColor(){
+
+void randColor() {
   //Randomly Flashes Color on Each LED
   //While Loop
   a = 0;
- while(a < NUM_LEDS){
- 	leds[a] = CHSV( random(50,256), 255, BRIGHTNESS);
- 	//FastLED.delay(500/FRAMES_PER_SECOND);
- 	a++;
- }
- 
+  while (a < NUM_LEDS) {
+    leds[a] = CHSV( random(50, 256), 255, BRIGHTNESS);
+    //FastLED.delay(500/FRAMES_PER_SECOND);
+    a++;
+  }
+
 }
 
 
 
 
-void doTimer(){
-            //Do timer
-           //Run Function 1: 15sec 
-           if(cycle <= 15){
-              gPatt(0);
-              //scamTheGreen();
-            }
-           //Run Function 2: 15sec  
-           if(cycle > 15 && cycle <= 30){
-              
-            }
-           if(cycle > 30 && cycle <= 45){
-               randColor();
-               pulseLeds();
-               scamTheGreen();
-            }
-           if(cycle > 45 && cycle <= 60){
-               randAllColor();
-               //scamTheGreen();
-            }
-           //Run Function 3: 15sec
-           // if(cycle > 30 && cycle <= 45){
-              // tjColors();
-           // }
-           //Reset cycle
-           if(cycle > 60){
- 
-              cycle = 0;
-    
-            }
+void doTimer() {
+  //Do timer
+  //Run Function 1: 15sec
+  if (cycle <= 15) {
+    gPatt(0);
+    //scamTheGreen();
+  }
+  //Run Function 2: 15sec
+  if (cycle > 15 && cycle <= 30) {
+
+  }
+  if (cycle > 30 && cycle <= 45) {
+    randColor();
+    pulseLeds();
+    scamTheGreen();
+  }
+  if (cycle > 45 && cycle <= 60) {
+    randAllColor();
+    //scamTheGreen();
+  }
+  //Run Function 3: 15sec
+  // if(cycle > 30 && cycle <= 45){
+  // tjColors();
+  // }
+  //Reset cycle
+  if (cycle > 60) {
+
+    cycle = 0;
+
+  }
 }
 
-void randAllColor(){
+void randAllColor() {
   //Randomly Flashes Color on Each LED
   //While Loop
-  rnum = random(50,256);
+  rnum = random(50, 256);
   b = 0;
- while(b < NUM_LEDS){
- 	leds[b] = CHSV(rnum,255,BRIGHTNESS);
- 	//Wait
- 	delay(dly);
- 	//Write to LED Strip
- 	FastLED.show();
- 	b++;
- }
+  while (b < NUM_LEDS) {
+    leds[b] = CHSV(rnum, 255, BRIGHTNESS);
+    //Wait
+    delay(dly);
+    //Write to LED Strip
+    FastLED.show();
+    b++;
+  }
 }
 
 /*
-void tjColors(){
+  void tjColors(){
   f = 0;
   while(f < NUM_LEDS){
     leds[f] = CHSV(64,255,BRIGHTNESS);
@@ -357,113 +524,113 @@ void tjColors(){
     FastLED.show();
     f++;
   }
-}
+  }
 */
 
- void testGreen(){
- c = 0;
- while(c < NUM_LEDS){
-    leds[c].setRGB(255,0,0);
+void testGreen() {
+  c = 0;
+  while (c < NUM_LEDS) {
+    leds[c].setRGB(255, 0, 0);
     //FastLED.show();
     c++;
 
- }
-    FastLED.show();
-   delay(tdly);
- }
- 
- 
- void testRed(){
-   d = 0;
- while( d < NUM_LEDS ){  
-    leds[d].setRGB(0,255,0);
+  }
+  FastLED.show();
+  delay(tdly);
+}
+
+
+void testRed() {
+  d = 0;
+  while ( d < NUM_LEDS ) {
+    leds[d].setRGB(0, 255, 0);
     d++;
     //FastLED.show();
   }
-    FastLED.show();
-   delay(tdly);
- }
- 
- 
-  void scamTheGreen(){
-   d = 0;
- while( d < NUM_LEDS ){  
-    leds[d].setRGB(255,0,0);
+  FastLED.show();
+  delay(tdly);
+}
+
+
+void scamTheGreen() {
+  d = 0;
+  while ( d < NUM_LEDS ) {
+    leds[d].setRGB(255, 0, 0);
     d++;
     //FastLED.show();
   }
-    FastLED.show();
-   delay(greenDLY);
- }
- 
- 
- void testBlue(){
-   e = 0;
- while( e < NUM_LEDS ){  
-    leds[e].setRGB(0,0,255);
+  FastLED.show();
+  delay(greenDLY);
+}
+
+
+void testBlue() {
+  e = 0;
+  while ( e < NUM_LEDS ) {
+    leds[e].setRGB(0, 0, 255);
     e++;
     //FastLED.show();
   }
-    FastLED.show();
-   delay(tdly);
- }
- 
- void pulseLeds(){
-   pled = BRIGHTNESS;
-   FastLED.setBrightness(pled);
-   FastLED.show();
-   delay(pdly);
-   pled1 = pled-(pled/4);
-   FastLED.setBrightness(pled1);
-   FastLED.show();
-   delay(pdly);
-   pled2 = pled1-(pled1/4);
-   FastLED.setBrightness(pled2);
-   FastLED.show();
-   delay(pdly);
-   pled3 = pled2-(pled2/4);
-   FastLED.setBrightness(pled3);
-   FastLED.show();
-   delay(pdly);
-   pled4 = pled3-(pled3/4);
-   FastLED.setBrightness(pled4);
-   FastLED.show();
-   delay(pdly);
-   FastLED.setBrightness(pled3);
-   FastLED.show();
-   delay(pdly);
-   FastLED.setBrightness(pled2);
-   FastLED.show();
-   delay(pdly);
-   FastLED.setBrightness(pled1);
-   FastLED.show();
-   delay(pdly);
-   FastLED.setBrightness(pled);
-   FastLED.show();
-   delay(pdly);
-   
-   
- }
-   
- // Changes all LEDS to given color
-void allColor(CRGB c){
-  for(int i=0; i<NUM_LEDS; i++){
+  FastLED.show();
+  delay(tdly);
+}
+
+void pulseLeds() {
+  pled = BRIGHTNESS;
+  FastLED.setBrightness(pled);
+  FastLED.show();
+  delay(pdly);
+  pled1 = pled - (pled / 4);
+  FastLED.setBrightness(pled1);
+  FastLED.show();
+  delay(pdly);
+  pled2 = pled1 - (pled1 / 4);
+  FastLED.setBrightness(pled2);
+  FastLED.show();
+  delay(pdly);
+  pled3 = pled2 - (pled2 / 4);
+  FastLED.setBrightness(pled3);
+  FastLED.show();
+  delay(pdly);
+  pled4 = pled3 - (pled3 / 4);
+  FastLED.setBrightness(pled4);
+  FastLED.show();
+  delay(pdly);
+  FastLED.setBrightness(pled3);
+  FastLED.show();
+  delay(pdly);
+  FastLED.setBrightness(pled2);
+  FastLED.show();
+  delay(pdly);
+  FastLED.setBrightness(pled1);
+  FastLED.show();
+  delay(pdly);
+  FastLED.setBrightness(pled);
+  FastLED.show();
+  delay(pdly);
+
+
+}
+
+// Changes all LEDS to given color
+void allColor(CRGB c) {
+  for (int i = 0; i < NUM_LEDS; i++) {
     leds[i] = c;
   }
   FastLED.show();
 }
 
-void allRandom(){
-  for(int i=0; i<NUM_LEDS; i++){
+void allRandom() {
+  for (int i = 0; i < NUM_LEDS; i++) {
     leds[i] = randomColor();
   }
-  FastLED.show(); 
+  FastLED.show();
 }
 
 // Random disolve colors
-void disolve(int simultaneous, int cycles, int speed){
-  for(int i=0; i<cycles; i++){
-    for(int j=0; j<simultaneous; j++){
+void disolve(int simultaneous, int cycles, int speed) {
+  for (int i = 0; i < cycles; i++) {
+    for (int j = 0; j < simultaneous; j++) {
       int idx = random(NUM_LEDS);
       leds[idx] = CRGB::Black;
     }
@@ -476,12 +643,12 @@ void disolve(int simultaneous, int cycles, int speed){
 
 // Flashes given color
 // If c==NULL, random color flash
-void flash(CRGB c, int count, int speed){
-  for(int i=0; i<count; i++){
-    if(c){
+void flash(CRGB c, int count, int speed) {
+  for (int i = 0; i < count; i++) {
+    if (c) {
       allColor(c);
     }
-    else{
+    else {
       allColor(randomColor());
     }
     delay(speed);
@@ -491,13 +658,13 @@ void flash(CRGB c, int count, int speed){
 }
 
 // Wipes color from end to end
-void colorWipe(CRGB c, int speed, int direction){
-  for(int i=0; i<NUM_LEDS; i++){
-    if(direction == FORWARD){
+void colorWipe(CRGB c, int speed, int direction) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (direction == FORWARD) {
       leds[i] = c;
     }
-    else{
-      leds[NUM_LEDS-1-i] = c;
+    else {
+      leds[NUM_LEDS - 1 - i] = c;
     }
     FastLED.show();
     delay(speed);
@@ -505,16 +672,16 @@ void colorWipe(CRGB c, int speed, int direction){
 }
 
 // Rainbow colors that slowly cycle across LEDs
-void rainboW(int cycles, int speed){ // TODO direction
-  if(cycles == 0){
-    for(int i=0; i< NUM_LEDS; i++) {
+void rainboW(int cycles, int speed) { // TODO direction
+  if (cycles == 0) {
+    for (int i = 0; i < NUM_LEDS; i++) {
       leds[i] = Wheel(((i * 256 / NUM_LEDS)) & 255);
     }
     FastLED.show();
   }
-  else{
-    for(int j=0; j<256*cycles; j++) {
-      for(int i=0; i< NUM_LEDS; i++) {
+  else {
+    for (int j = 0; j < 256 * cycles; j++) {
+      for (int i = 0; i < NUM_LEDS; i++) {
         leds[i] = Wheel(((i * 256 / NUM_LEDS) + j) & 255);
       }
       FastLED.show();
@@ -524,57 +691,57 @@ void rainboW(int cycles, int speed){ // TODO direction
 }
 
 // Theater-style crawling lights
-void theaterChase(CRGB c, int cycles, int speed){ // TODO direction
+void theaterChase(CRGB c, int cycles, int speed) { // TODO direction
 
-  for (int j=0; j<cycles; j++) {  
-    for (int q=0; q < 3; q++) {
-      for (int i=0; i < NUM_LEDS; i=i+3) {
-        int pos = i+q;
+  for (int j = 0; j < cycles; j++) {
+    for (int q = 0; q < 3; q++) {
+      for (int i = 0; i < NUM_LEDS; i = i + 3) {
+        int pos = i + q;
         leds[pos] = c;    //turn every third pixel on
       }
       FastLED.show();
 
       delay(speed);
 
-      for (int i=0; i < NUM_LEDS; i=i+3) {
-        leds[i+q] = CRGB::Black;        //turn every third pixel off
+      for (int i = 0; i < NUM_LEDS; i = i + 3) {
+        leds[i + q] = CRGB::Black;      //turn every third pixel off
       }
     }
   }
 }
 
 // Theater-style crawling lights with rainbow effect
-void theaterChaseRainbow(int cycles, int speed){ // TODO direction, duration
-  for (int j=0; j < 256 * cycles; j++) {     // cycle all 256 colors in the wheel
-    for (int q=0; q < 3; q++) {
-      for (int i=0; i < NUM_LEDS; i=i+3) {
-        int pos = i+q;
-        leds[pos] = Wheel( (i+j) % 255);    //turn every third pixel on
+void theaterChaseRainbow(int cycles, int speed) { // TODO direction, duration
+  for (int j = 0; j < 256 * cycles; j++) {   // cycle all 256 colors in the wheel
+    for (int q = 0; q < 3; q++) {
+      for (int i = 0; i < NUM_LEDS; i = i + 3) {
+        int pos = i + q;
+        leds[pos] = Wheel( (i + j) % 255);  //turn every third pixel on
       }
       FastLED.show();
 
       delay(speed);
 
-      for (int i=0; i < NUM_LEDS; i=i+3) {
-        leds[i+q] = CRGB::Black;  //turn every third pixel off
+      for (int i = 0; i < NUM_LEDS; i = i + 3) {
+        leds[i + q] = CRGB::Black; //turn every third pixel off
       }
     }
   }
 }
 
 // Random flashes of lightning
-void lightning(CRGB c, int simultaneous, int cycles, int speed){
+void lightning(CRGB c, int simultaneous, int cycles, int speed) {
   int flashes[simultaneous];
 
-  for(int i=0; i<cycles; i++){
-    for(int j=0; j<simultaneous; j++){
+  for (int i = 0; i < cycles; i++) {
+    for (int j = 0; j < simultaneous; j++) {
       int idx = random(NUM_LEDS);
       flashes[j] = idx;
       leds[idx] = c ? c : randomColor();
     }
     FastLED.show();
     delay(speed);
-    for(int s=0; s<simultaneous; s++){
+    for (int s = 0; s < simultaneous; s++) {
       leds[flashes[s]] = CRGB::Black;
     }
     delay(speed);
@@ -582,30 +749,30 @@ void lightning(CRGB c, int simultaneous, int cycles, int speed){
 }
 
 // Sliding bar across LEDs
-void cylon(CRGB c, int width, int speed){
+void cylon(CRGB c, int width, int speed) {
   // First slide the leds in one direction
-  for(int i = 0; i <= NUM_LEDS-width; i++) {
-    for(int j=0; j<width; j++){
-      leds[i+j] = c;
+  for (int i = 0; i <= NUM_LEDS - width; i++) {
+    for (int j = 0; j < width; j++) {
+      leds[i + j] = c;
     }
 
     FastLED.show();
 
     // now that we've shown the leds, reset to black for next loop
-    for(int j=0; j<5; j++){
-      leds[i+j] = CRGB::Black;
+    for (int j = 0; j < 5; j++) {
+      leds[i + j] = CRGB::Black;
     }
     delay(speed);
   }
 
-  // Now go in the other direction.  
-  for(int i = NUM_LEDS-width; i >= 0; i--) {
-    for(int j=0; j<width; j++){
-      leds[i+j] = c;
+  // Now go in the other direction.
+  for (int i = NUM_LEDS - width; i >= 0; i--) {
+    for (int j = 0; j < width; j++) {
+      leds[i + j] = c;
     }
     FastLED.show();
-    for(int j=0; j<width; j++){
-      leds[i+j] = CRGB::Black;
+    for (int j = 0; j < width; j++) {
+      leds[i + j] = CRGB::Black;
     }
 
     delay(speed);
@@ -613,47 +780,47 @@ void cylon(CRGB c, int width, int speed){
 }
 
 // Display alternating stripes
-void stripes(CRGB c1, CRGB c2, int width){
-  for(int i=0; i<NUM_LEDS; i++){
-    if(i % (width * 2) < width){
+void stripes(CRGB c1, CRGB c2, int width) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (i % (width * 2) < width) {
       leds[i] = c1;
     }
-    else{
+    else {
       leds[i] = c2;
-    } 
+    }
   }
   FastLED.show();
 }
 
 // Theater-style crawling of stripes
-void stripesChase(CRGB c1, CRGB c2, int width, int cycles, int speed){ // TODO direction
+void stripesChase(CRGB c1, CRGB c2, int width, int cycles, int speed) { // TODO direction
 
 }
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 CRGB Wheel(byte WheelPos) {
-  if(WheelPos < 85) {
+  if (WheelPos < 85) {
     return CRGB(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } 
-  else if(WheelPos < 170) {
+  }
+  else if (WheelPos < 170) {
     WheelPos -= 85;
     return CRGB(255 - WheelPos * 3, 0, WheelPos * 3);
-  } 
+  }
   else {
     WheelPos -= 170;
     return CRGB(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
 
-CRGB randomColor(){
-  return Wheel(random(256)); 
+CRGB randomColor() {
+  return Wheel(random(256));
 }
 
 
 
-//Seconds Incrementer  
-void incCycle() 
+//Seconds Incrementer
+void incCycle()
 {
   cycle++;
 }
@@ -661,93 +828,104 @@ void incCycle()
 void analogAdjust()
 {
 
-        if(analog<=49){
-              analog2 = 10;
-              doFlash = 0;
-        }
-              
-              
-        else if(50<=analog && analog<=150){
-              analog2 = 100;
-              doFlash = 0;
-        }
-              
-              
-        else if(151<=analog && analog<=250){
-              analog2 = 200;
-              doFlash = 0;
-        }
-              
-              
-        else if(251<=analog && analog<=350){
-              analog2 = 300;
-              doFlash = 0;
-        }
-              
-              
-        else if(351<=analog && analog<=450){
-              analog2 = 400;
-              doFlash = 0;
-        }
-              
-              
-        else if(451<=analog && analog<=550){
-              analog2 = 500;
-              doFlash = 0;
-        }
-              
-              
-        else if(551<=analog && analog<=650){
-              analog2 = 600;
-              doFlash = 0;
-         }
-              
-              
-        else if(651<=analog && analog<=750){
-              analog2 = 700;
-              doFlash = 0;
-         }
-              
-              
-        else if(751<=analog && analog<=850){
-              analog2 = 800;
-              doFlash = 0;
-         }
-              
-              
-        else if(851<=analog && analog<=950){
-              analog2 = 900;
-              doFlash = 0;
-         }
-              
-              
-        else if(951<=analog){
-              analog2 = 1000;
-              doFlash = 1;
-         }
-              
-              
+  if (analog <= 49) {
+    analog2 = 10;
+    doFlash = 0;
+  }
 
-      
-      
-   // Serial.println(analog);
-    Serial.println(analog2); 
+
+  else if (50 <= analog && analog <= 150) {
+    analog2 = 100;
+    doFlash = 0;
+  }
+
+
+  else if (151 <= analog && analog <= 250) {
+    analog2 = 200;
+    doFlash = 0;
+  }
+
+
+  else if (251 <= analog && analog <= 350) {
+    analog2 = 300;
+    doFlash = 0;
+  }
+
+
+  else if (351 <= analog && analog <= 450) {
+    analog2 = 400;
+    doFlash = 0;
+  }
+
+
+  else if (451 <= analog && analog <= 550) {
+    analog2 = 500;
+    doFlash = 0;
+  }
+
+
+  else if (551 <= analog && analog <= 650) {
+    analog2 = 600;
+    doFlash = 0;
+  }
+
+
+  else if (651 <= analog && analog <= 750) {
+    analog2 = 700;
+    doFlash = 0;
+  }
+
+
+  else if (751 <= analog && analog <= 850) {
+    analog2 = 800;
+    doFlash = 0;
+  }
+
+
+  else if (851 <= analog && analog <= 920) {
+    analog2 = 900;
+    doFlash = 0;
+  }
+
+
+  else if (921 <= analog) {
+    analog2 = 1000;
+    doFlash = 1;
+  }
+
+
+
+
+  if (analogDebug = 1) {
+    Serial.println(analog);
+  }
+  if (analogDebug = 2) {
+    Serial.println(analog2);
+  }
 }
 
 void fill_solid( struct CRGB * leds, int numToFill,
                  const struct CRGB& color);
 
-void nothing(){
+void nothing() {
+
+  digitalWrite(13, HIGH);
+  delay(100);
+  digitalWrite(13, LOW);
 }
 
 
-  
-  
-  
-  
 
-  
-  
+
+
+
+
+
+
+
+
+
+
 
 
 
